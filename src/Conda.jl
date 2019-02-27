@@ -10,6 +10,7 @@ The main functions in Conda are:
 - `Conda.rm(package)`: remove (uninstall) a package;
 - `Conda.update()`: update all installed packages to the latest version;
 - `Conda.list()`: list all installed packages.
+- `Conda.info()`: Conda.jl settings (conda environment and executable path).
 - `Conda.add_channel(channel)`: add a channel to the list of channels;
 - `Conda.channels()`: get the current list of channels;
 - `Conda.rm_channel(channel)`: remove a channel from the list of channels;
@@ -77,11 +78,7 @@ const conda = if Compat.Sys.iswindows()
     conda_bat = joinpath(p, "conda.bat")
     isfile(conda_bat) ? conda_bat : joinpath(p, "conda.exe")
 else
-    if haskey(ENV, "CONDA_EXE")
-        ENV["CONDA_EXE"]
-    else
-        joinpath(bin_dir(ROOTENV), "conda")
-    end
+    get(ENV, "CONDA_JL_CONDA_EXE", joinpath(bin_dir(ROOTENV), "conda"))
 end
 
 "Path to the condarc file"
@@ -151,9 +148,38 @@ end
 "Suppress progress bar in continuous integration environments"
 _quiet() = get(ENV, "CI", "false") == "true" ? `-q` : ``
 
+"Return Conda.jl setting"
+function _info()
+  return """Conda.jl Environment:
+
+ROOTENV = $(ROOTENV)
+CONDA_JL_HOME = $(get(ENV, "CONDA_JL_HOME", ""))
+CONDA_JL_CONDA_EXE = $(CONDA_JL_CONDA_EXE)
+
+current Conda executable path: $(Conda.conda)
+"""
+end
+
+"Print Conda.jl setting"
+function info()
+  print(_info())
+end
+
+
 "Install miniconda if it hasn't been installed yet; _install_conda(true) installs Conda even if it has already been installed."
 function _install_conda(env::Environment, force::Bool=false)
     if force || !isfile(Conda.conda)
+        if haskey(ENV, "CONDA_JL_HOME")
+          Compat.@info("""Cannot find conda executable under current setting:
+$(_info())
+trying fix by rebuilding rebuild Conda.jl now. If this keeps failing, try:
+update CONDA_JL_HOME to custom conda environment, or
+unset CONDA_JL_HOME and delete existing miniconda to allow Conda.jl install
+its own miniconda by default.
+""")
+          return
+        end
+
         Compat.@info("Downloading miniconda installer ...")
         if Compat.Sys.isunix()
             installer = joinpath(PREFIX, "installer.sh")

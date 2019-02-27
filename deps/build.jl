@@ -20,6 +20,11 @@ end
 
 ROOTENV = get(ENV, "CONDA_JL_HOME", DefaultDeps.ROOTENV)
 MINICONDA_VERSION = get(ENV, "CONDA_JL_VERSION", DefaultDeps.MINICONDA_VERSION)
+CONDA_JL_CONDA_EXE = if haskey(ENV, "CONDA_JL_HOME")
+    get(ENV, "CONDA_JL_CONDA_EXE", get(ENV, "CONDA_EXE", nothing))
+else
+    nothing
+end
 
 if isdir(ROOTENV) && MINICONDA_VERSION != DefaultDeps.MINICONDA_VERSION
     error("""Miniconda version changed, since last build.
@@ -36,6 +41,7 @@ end
 deps = """
 const ROOTENV = "$(escape_string(ROOTENV))"
 const MINICONDA_VERSION = "$(escape_string(MINICONDA_VERSION))"
+const CONDA_JL_CONDA_EXE = "$(escape_string(CONDA_JL_CONDA_EXE))"
 """
 
 mkpath(condadir)
